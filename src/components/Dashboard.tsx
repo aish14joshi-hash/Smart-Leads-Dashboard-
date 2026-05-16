@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
   Plus, 
   Search, 
-  Filter, 
   Download, 
   LogOut, 
   MoreVertical,
@@ -16,7 +16,8 @@ import {
   UserX,
   UserPlus,
   Sun,
-  Moon
+  Moon,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -45,7 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
 import { LeadDialog } from './LeadDialog';
 import { useDebounce } from 'use-debounce';
@@ -86,7 +87,7 @@ export const Dashboard: React.FC = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error('Failed to fetch leads');
+      toast.error('Performance degradation: Connection failed');
     } finally {
       setLoading(false);
     }
@@ -104,17 +105,11 @@ export const Dashboard: React.FC = () => {
   };
 
   const handlePrevPage = () => {
-    // Firestore pagination is tricky backwards. 
-    // Usually we store the previous start docs in a stack.
     if (history.length > 0) {
       const newHistory = [...history];
-      newHistory.pop(); // remove current
+      newHistory.pop();
       const prevDoc = newHistory[newHistory.length - 1] || null;
       setHistory(newHistory);
-      // This is a simplified fetch, ideally we'd re-query with the right doc
-      // But for this assignment, we'll just re-fetch from start for simplicity if history management is complex
-      // Actually, I'll just reset and go back one step if possible.
-      // Better way: use a state for all previous lastDocs.
       fetchLeads(prevDoc === null);
     }
   };
@@ -123,26 +118,26 @@ export const Dashboard: React.FC = () => {
     try {
       if (editingLead) {
         await leadService.updateLead(editingLead.id!, data);
-        toast.success('Lead updated successfully');
+        toast.success('Entity synchronization successful');
       } else {
         await leadService.createLead(data);
-        toast.success('Lead created successfully');
+        toast.success('Entity initialization successful');
       }
       setIsDialogOpen(false);
       fetchLeads(true);
     } catch (error) {
-      toast.error('Operation failed');
+      toast.error('Operation failure: Data integrity violation');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this lead?')) {
+    if (confirm('Initiate entity elimination? This action is irreversible.')) {
       try {
         await leadService.deleteLead(id);
-        toast.success('Lead deleted successfully');
+        toast.success('Entity elimination confirmed');
         fetchLeads(true);
       } catch (error) {
-        toast.error('Delete failed');
+        toast.error('Elimination failed: Insufficient clearance');
       }
     }
   };
@@ -164,15 +159,16 @@ export const Dashboard: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `leads_export_${new Date().toISOString()}.csv`);
+    link.setAttribute("download", `nexus_export_${new Date().getTime()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success('Data extraction complete');
   };
 
   const stats = useMemo(() => {
     return {
-      total: leads.length, // This is just for current page, ideally we'd have a total count doc
+      total: leads.length,
       new: leads.filter(l => l.status === 'New').length,
       qualified: leads.filter(l => l.status === 'Qualified').length,
       lost: leads.filter(l => l.status === 'Lost').length,
@@ -190,255 +186,377 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans transition-colors duration-300">
-      {/* Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20 px-4 sm:px-6 h-16 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center shadow-indigo-500/20 shadow-lg">
-            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </div>
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
-            SmartLeads <span className="text-slate-400 font-normal px-1 sm:px-2">/</span> <span className="font-medium text-slate-600 dark:text-slate-400 hidden xs:inline">Pipeline</span>
-          </h1>
-        </div>
-        
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={toggleTheme} 
-            className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-          >
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-          </Button>
-          
-          <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-bold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase tracking-wider hidden md:block">
-            {profile?.role}
-          </div>
-          
-          <div className="flex items-center gap-2 pr-2 border-r border-slate-200 dark:border-slate-800">
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-200 hidden xs:block">{profile?.name?.split(' ')[0]}</p>
-          </div>
-          
-          <Button variant="ghost" size="icon" onClick={() => logout()} className="text-slate-400 hover:text-red-500 transition-colors">
-            <LogOut className="w-5 h-5" />
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-500 font-sans selection:bg-primary/30 selection:text-primary-foreground relative overflow-hidden">
+      {/* High-Tech Background & Grain Overlay */}
+      <div className="fixed inset-0 pointer-events-none -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
+      <div className="fixed inset-0 pointer-events-none -z-10 opacity-[0.03] grayscale brightness-50 mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+      
+      {/* Aesthetic Background Elements */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/20 rounded-full blur-[160px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[140px]" />
+      </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 space-y-6">
+      <nav className="sticky top-0 z-50 px-6 py-6 transition-all">
+        <motion.div 
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="max-w-7xl mx-auto bg-card/60 backdrop-blur-2xl border border-border/50 rounded-[2.5rem] p-3 pl-8 shadow-2xl shadow-primary/5 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-5 group">
+            <motion.div 
+              whileHover={{ rotate: 360, scale: 1.1 }}
+              transition={{ duration: 0.8, type: "spring" }}
+              className="w-14 h-14 bg-primary text-primary-foreground rounded-[1.25rem] flex items-center justify-center shadow-lg shadow-primary/30 relative overflow-hidden active:scale-95"
+            >
+               <TrendingUp className="w-7 h-7 relative z-10" />
+               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+            </motion.div>
+            <div className="flex flex-col">
+              <span className="text-2xl font-black tracking-tighter leading-none italic">SmartLeads <span className="text-primary italic">Nexus</span></span>
+              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/60 mt-1">Management Terminal v2.4</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 pr-2">
+            <div className="hidden md:flex flex-col items-end mr-4">
+               <span className="text-[10px] font-black text-foreground uppercase tracking-widest leading-none">System Status</span>
+               <div className="flex items-center gap-2 mt-1">
+                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                 <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Operational</span>
+               </div>
+            </div>
+            
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleTheme} 
+              className="rounded-2xl w-12 h-12 text-muted-foreground hover:text-primary transition-all hover:bg-primary/5 active:scale-90"
+            >
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </Button>
+            
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button 
+                variant="ghost" 
+                onClick={() => logout()}
+                className="rounded-2xl h-12 px-5 text-muted-foreground hover:text-red-500 transition-all font-black text-[10px] uppercase tracking-widest hover:bg-red-500/5 group"
+              >
+                <LogOut className="w-4 h-4 mr-3 group-hover:-translate-x-1 transition-transform" />
+                Terminate
+              </Button>
+            </motion.div>
+
+            <div className="w-[1px] h-8 bg-border/50 mx-2" />
+
+            <div className="flex items-center gap-3 pl-2 py-1 pr-1 bg-secondary/30 rounded-2xl border border-border/50">
+              <div className="flex flex-col items-end text-[9px] font-black uppercase tracking-widest mr-1">
+                <span className="text-foreground/80">{profile?.name?.split(' ')[0]}</span>
+                <span className="text-[8px] text-muted-foreground/40">Level 4 Access</span>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-primary border-2 border-background shadow-lg overflow-hidden group/avatar relative">
+               <div className="w-full h-full flex items-center justify-center text-[12px] font-black text-primary-foreground">
+                  {profile?.name?.[0].toUpperCase()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </nav>
+
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-8 z-10 transition-all">
         {/* Bento Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 mb-2 sm:mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Pipeline</span>
-              <Users className="h-3 w-3 text-slate-400" />
-            </CardHeader>
-            <CardContent className="pb-4 sm:pb-6">
-              <div className="text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{stats.total}</div>
-              <p className="text-[10px] text-slate-400 mt-1 sm:mt-2 font-medium">Record Count</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 mb-2 sm:mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">New</span>
-              <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-            </CardHeader>
-            <CardContent className="pb-4 sm:pb-6">
-              <div className="text-xl sm:text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">{stats.new}</div>
-              <div className="mt-2 sm:mt-3 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500" style={{ width: `${(stats.new / (stats.total || 1)) * 100}%` }}></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 bg-emerald-50/50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-900/30 mb-2 sm:mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/70 dark:text-emerald-400/70">Conversion</span>
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            </CardHeader>
-            <CardContent className="pb-4 sm:pb-6">
-              <div className="text-xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                {Math.round((stats.qualified / (stats.total || 1)) * 100)}%
-              </div>
-              <p className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 mt-1 sm:mt-2 font-bold uppercase tracking-widest">{stats.qualified} Qualified</p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 mb-2 sm:mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Risk</span>
-              <div className="w-2 h-2 rounded-full bg-red-400" />
-            </CardHeader>
-            <CardContent className="pb-4 sm:pb-6">
-              <div className="text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{stats.lost}</div>
-              <p className="text-[10px] text-slate-400 mt-1 sm:mt-2 font-medium">Lost Potential</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {[
+            { label: 'Pipeline', value: stats.total, icon: Users, color: 'text-primary', bg: 'bg-primary/5', trend: 'Record Count' },
+            { label: 'New Entities', value: stats.new, icon: UserPlus, color: 'text-indigo-500', bg: 'bg-indigo-500/5', progress: true, trend: 'Active Leads' },
+            { label: 'Conversion', value: `${Math.round((stats.qualified / (stats.total || 1)) * 100)}%`, icon: UserCheck, color: 'text-emerald-500', bg: 'bg-emerald-500/5', trend: `${stats.qualified} Qualified` },
+            { label: 'Risk factor', value: stats.lost, icon: UserX, color: 'text-red-500', bg: 'bg-red-500/5', trend: 'Lost Potential' }
+          ].map((stat, idx) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1, duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+            >
+              <Card className="rounded-[2rem] border-border shadow-md overflow-hidden bg-card hover:shadow-2xl transition-all duration-500 group border-border/50">
+                <CardHeader className={`flex flex-row items-center justify-between space-y-0 p-5 pb-3 ${stat.bg} border-b border-border/30`}>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{stat.label}</span>
+                  <stat.icon className={`h-4 w-4 ${stat.color} opacity-70 group-hover:scale-125 group-hover:rotate-6 transition-all duration-500`} />
+                </CardHeader>
+                <CardContent className="pt-6 pb-8">
+                  <div className="text-3xl sm:text-4xl font-black text-foreground tracking-tighter">{stat.value}</div>
+                  {stat.progress ? (
+                    <div className="mt-4 h-2 w-full bg-secondary rounded-full overflow-hidden border border-border/50">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(stats.new / (stats.total || 1)) * 100}%` }}
+                        transition={{ duration: 1.5, delay: 0.5, ease: "circOut" }}
+                        className="h-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mt-3">
+                      <Sparkles className={`w-3 h-3 ${stat.color} opacity-40`} />
+                      <p className={`text-[10px] ${stat.color} font-bold uppercase tracking-widest opacity-80`}>{stat.trend}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
 
         {/* Filters & Actions Bento Container */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-1">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="bg-card/40 backdrop-blur-xl p-5 sm:p-6 rounded-[2.5rem] border border-border shadow-2xl flex flex-col lg:flex-row gap-6 justify-between items-stretch lg:items-center relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center flex-1 z-10">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input 
-                placeholder="Search index..." 
-                className="pl-10 h-10 border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 text-sm focus:ring-indigo-500" 
+                placeholder="Query database..." 
+                className="pl-12 h-14 border-border/50 rounded-[1.25rem] bg-background/50 text-sm focus:ring-primary/20 focus:border-primary transition-all shadow-inner focus:bg-background" 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="grid grid-cols-2 sm:flex gap-2">
+            <div className="grid grid-cols-2 sm:flex gap-3">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-10 border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-[10px] font-bold uppercase tracking-tight sm:w-[130px]">
+                <SelectTrigger className="h-14 border-border/50 rounded-[1.25rem] bg-background text-[10px] font-bold uppercase tracking-[0.15em] sm:w-[150px] focus:ring-primary/20 shadow-sm hover:bg-secondary/50">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl dark:border-slate-800">
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="New">New</SelectItem>
-                  <SelectItem value="Contacted">Contacted</SelectItem>
-                  <SelectItem value="Qualified">Qualified</SelectItem>
-                  <SelectItem value="Lost">Lost</SelectItem>
+                <SelectContent className="rounded-[1.25rem] border-border shadow-2xl p-2 bg-card/95 backdrop-blur-lg">
+                  <SelectItem value="all" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">All Statuses</SelectItem>
+                  <SelectItem value="New" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">New</SelectItem>
+                  <SelectItem value="Contacted" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Contacted</SelectItem>
+                  <SelectItem value="Qualified" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Qualified</SelectItem>
+                  <SelectItem value="Lost" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Lost</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="h-10 border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-[10px] font-bold uppercase tracking-tight sm:w-[130px]">
+                <SelectTrigger className="h-14 border-border/50 rounded-[1.25rem] bg-background text-[10px] font-bold uppercase tracking-[0.15em] sm:w-[150px] focus:ring-primary/20 shadow-sm hover:bg-secondary/50">
                   <SelectValue placeholder="Source" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl dark:border-slate-800">
-                  <SelectItem value="all">All Sources</SelectItem>
-                  <SelectItem value="Website">Website</SelectItem>
-                  <SelectItem value="Instagram">Instagram</SelectItem>
-                  <SelectItem value="Referral">Referral</SelectItem>
+                <SelectContent className="rounded-[1.25rem] border-border shadow-2xl p-2 bg-card/95 backdrop-blur-lg">
+                  <SelectItem value="all" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">All Sources</SelectItem>
+                  <SelectItem value="Website" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Website</SelectItem>
+                  <SelectItem value="Instagram" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Instagram</SelectItem>
+                  <SelectItem value="Referral" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Referral</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 z-10">
             <Select value={sortOrder} onValueChange={(v: "desc" | "asc") => setSortOrder(v)}>
-              <SelectTrigger className="flex-1 lg:w-[130px] h-10 border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-[10px] font-bold uppercase tracking-tight">
+              <SelectTrigger className="flex-1 lg:w-[140px] h-14 border-border/50 rounded-[1.25rem] bg-background text-[10px] font-bold uppercase tracking-[0.15em] hidden sm:flex focus:ring-primary/20 shadow-sm hover:bg-secondary/50">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl dark:border-slate-800">
-                <SelectItem value="desc">Latest</SelectItem>
-                <SelectItem value="asc">Oldest</SelectItem>
+              <SelectContent className="rounded-[1.25rem] border-border shadow-2xl p-2 bg-card/95 backdrop-blur-lg">
+                <SelectItem value="desc" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Latest Entries</SelectItem>
+                <SelectItem value="asc" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Oldest Entries</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={exportToCSV} className="h-10 rounded-xl border-slate-200 dark:border-slate-700 px-3 sm:px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">
-              <Download className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Export</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={exportToCSV} 
+              className="h-14 rounded-[1.25rem] border-border/50 px-6 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground hover:bg-secondary transition-all active:scale-95 shadow-sm group/btn"
+            >
+              <Download className="w-4 h-4 sm:mr-3 group-hover/btn:translate-y-0.5 transition-transform" />
+              <span className="hidden sm:inline">CSV Export</span>
             </Button>
-            <Button size="sm" onClick={() => { setEditingLead(null); setIsDialogOpen(true); }} className="h-10 flex-1 lg:flex-none rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 text-[10px] font-bold uppercase tracking-wider shadow-indigo-200 dark:shadow-none transition-all active:scale-95">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Lead
+            <Button 
+              size="sm" 
+              onClick={() => { setEditingLead(null); setIsDialogOpen(true); }} 
+              className="h-14 flex-1 lg:flex-none rounded-[1.25rem] bg-primary hover:primary/90 px-8 text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground shadow-[0_10px_30px_rgba(var(--primary),0.2)] transition-all active:scale-95 group/add"
+            >
+              <Plus className="w-4 h-4 mr-3 group-hover/add:rotate-90 transition-transform duration-500" />
+              Initialize Entity
             </Button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Table Bento Container */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/30">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Registry</span>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium italic hidden xs:inline">Record Set (1-{leads.length})</span>
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.7 }}
+          className="bg-card/50 backdrop-blur-sm rounded-[3rem] border border-border shadow-2xl overflow-hidden group transition-all duration-500 relative"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] to-transparent pointer-events-none" />
+          
+          <div className="p-8 border-b border-border flex justify-between items-center bg-secondary/30 relative">
+            <div className="flex items-center gap-4">
+              <div className="w-3 h-8 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
+              <div>
+                <span className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">Entity Registry Interface</span>
+                <p className="text-[9px] text-muted-foreground/60 font-bold uppercase tracking-[0.1em] mt-0.5 italic">Synchronized at {new Date().toLocaleTimeString()}</p>
+              </div>
+            </div>
+            <div className="hidden xs:flex items-center gap-5">
+               <div className="flex -space-x-2">
+                 {Array.from({ length: 3 }).map((_, i) => (
+                   <div key={i} className="w-7 h-7 rounded-full bg-secondary border-2 border-card flex items-center justify-center text-[8px] font-bold" style={{ zIndex: 3-i }}>{['JD', 'MS', 'AK'][i]}</div>
+                 ))}
+               </div>
+               <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">
+                 Active Agents
+               </span>
+            </div>
           </div>
-          <div className="overflow-x-auto">
+          
+          <div className="overflow-x-auto relative">
             <Table>
-              <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
-                <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
-                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 py-4 h-auto min-w-[150px]">Entity</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 h-auto min-w-[150px]">Communication</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 h-auto">Status</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 h-auto">Acquisition</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 h-auto text-right">Registered</TableHead>
-                  <TableHead className="w-[60px] h-auto"></TableHead>
+              <TableHeader className="bg-secondary/40 backdrop-blur-md">
+                <TableRow className="hover:bg-transparent border-border">
+                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 py-6 px-10 h-auto">Entity Persona</TableHead>
+                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto">Communication Node</TableHead>
+                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-center">Status Matrix</TableHead>
+                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-center">Origin</TableHead>
+                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-right pr-10">Registration</TableHead>
+                  <TableHead className="w-[100px] h-auto pr-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
+                <AnimatePresence mode="popLayout">
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i} className="border-slate-50 dark:border-slate-800/50">
+                    <TableRow key={`skeleton-${i}`} className="border-border/30">
                       {Array.from({ length: 6 }).map((_, j) => (
-                        <TableCell key={j} className="py-4"><div className="h-4 bg-slate-50 dark:bg-slate-800 animate-pulse rounded-lg" /></TableCell>
+                        <TableCell key={j} className="py-8 px-10"><div className="h-6 bg-secondary/60 animate-pulse rounded-xl" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : leads.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-72 text-center text-slate-400">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700">
-                          <Users className="w-6 h-6 text-slate-300 dark:text-slate-600" />
+                    <TableCell colSpan={6} className="h-96 text-center">
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex flex-col items-center gap-6 py-16"
+                      >
+                        <div className="w-24 h-24 rounded-[2rem] bg-secondary flex items-center justify-center border border-border shadow-inner relative">
+                          <Users className="w-10 h-10 text-muted-foreground/20" />
+                          <div className="absolute top-0 right-0 w-3 h-3 bg-red-400 rounded-full animate-ping" />
                         </div>
-                        <p className="text-sm font-medium">No results found</p>
-                      </div>
+                        <div className="space-y-2">
+                          <p className="text-lg font-black text-foreground tracking-tight">NULL ENTITIES DETECTED</p>
+                          <p className="text-xs text-muted-foreground font-medium uppercase tracking-[0.1em]">Adjust synchronization parameters or initialize a record.</p>
+                        </div>
+                        <Button 
+                          onClick={() => { setEditingLead(null); setIsDialogOpen(true); }}
+                          variant="outline" 
+                          className="rounded-2xl border-primary/30 text-primary hover:bg-primary/5 h-12 uppercase text-[10px] font-black tracking-widest px-8"
+                        >
+                          Initialize New record
+                        </Button>
+                      </motion.div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  leads.map((lead) => (
-                    <TableRow key={lead.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 border-slate-50 dark:border-slate-800/50 transition-colors">
-                      <TableCell className="font-bold text-slate-700 dark:text-slate-200 py-4">{lead.name}</TableCell>
-                      <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{lead.email}</TableCell>
-                      <TableCell>{getStatusBadge(lead.status)}</TableCell>
-                      <TableCell>
-                        <span className="text-[10px] px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded font-bold uppercase tracking-tight border border-slate-200 dark:border-slate-700">
+                  leads.map((lead, index) => (
+                    <motion.tr
+                      layout
+                      key={lead.id}
+                      initial={{ opacity: 0, x: -15 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.2 } }}
+                      transition={{ delay: index * 0.05, duration: 0.5, ease: "easeOut" }}
+                      className="hover:bg-primary/[0.02] border-border/30 group/row transition-all duration-500 text-sm"
+                    >
+                      <TableCell className="font-bold text-foreground py-7 px-10 leading-tight">
+                        <div className="flex items-center gap-4">
+                           <div className="w-10 h-10 rounded-2xl bg-secondary group-hover/row:bg-primary/10 flex items-center justify-center text-[10px] font-black text-muted-foreground group-hover/row:text-primary transition-all duration-500">
+                             {lead.name.split(' ').map(n => n[0]).join('')}
+                           </div>
+                           <div className="flex flex-col">
+                             <span className="text-[13px] font-bold tracking-tight">{lead.name}</span>
+                             <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-[0.05em] opacity-60">ID: {lead.id?.slice(0, 8)}</span>
+                           </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground font-medium tracking-tight">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500/40" />
+                          {lead.email}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">{getStatusBadge(lead.status)}</TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-[10px] px-4 py-1.5 bg-secondary/80 text-foreground rounded-2xl font-black uppercase tracking-[0.15em] border border-border shadow-sm group-hover/row:border-primary/20 transition-colors">
                           {lead.source}
                         </span>
                       </TableCell>
-                      <TableCell className="text-slate-400 dark:text-slate-500 text-[11px] font-bold uppercase text-right whitespace-nowrap">
+                      <TableCell className="text-muted-foreground text-[10px] font-black uppercase text-right pr-10 whitespace-nowrap opacity-60 group-hover/row:opacity-90 transition-opacity">
                         {lead.createdAt?.seconds 
                           ? new Date(lead.createdAt.seconds * 1000).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
                           : 'PENDING'}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right pr-10">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all">
-                              <MoreVertical className="w-4 h-4 text-slate-400" />
+                            <Button variant="ghost" size="icon" className="h-11 w-11 hover:bg-background border border-transparent hover:border-border transition-all rounded-[0.8rem] group-hover/row:shadow-md">
+                              <MoreVertical className="w-5 h-5 text-muted-foreground opacity-40 group-hover/row:opacity-100 transition-opacity" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-900 shadow-xl">
-                            <DropdownMenuItem onClick={() => { setEditingLead(lead); setIsDialogOpen(true); }} className="rounded-lg cursor-pointer">
-                              <Edit className="w-3.5 h-3.5 mr-2" /> <span className="font-medium">Modify</span>
+                          <DropdownMenuContent align="end" className="rounded-[1.25rem] border-border p-2 bg-card shadow-[0_20px_50px_rgba(0,0,0,0.2)] min-w-[180px] backdrop-blur-xl">
+                            <DropdownMenuItem onClick={() => { setEditingLead(lead); setIsDialogOpen(true); }} className="rounded-xl cursor-pointer p-3.5 focus:bg-primary/10 focus:text-primary mb-1">
+                              <Edit className="w-4 h-4 mr-3 opacity-60" /> <span className="font-bold uppercase text-[10px] tracking-[0.2em]">Synchronize</span>
                             </DropdownMenuItem>
                             {profile?.role === 'Admin' && (
-                              <DropdownMenuItem className="text-red-500 dark:text-red-400 rounded-lg cursor-pointer" onClick={() => handleDelete(lead.id!)}>
-                                <Trash className="w-3.5 h-3.5 mr-2" /> <span className="font-medium">Eliminate</span>
+                              <DropdownMenuItem className="text-red-500 rounded-xl cursor-pointer p-3.5 focus:bg-red-500/10 focus:text-red-500" onClick={() => handleDelete(lead.id!)}>
+                                <Trash className="w-4 h-4 mr-3 opacity-60" /> <span className="font-bold uppercase text-[10px] tracking-[0.2em]">Eliminate</span>
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
-                    </TableRow>
+                    </motion.tr>
                   ))
                 )}
+                </AnimatePresence>
               </TableBody>
             </Table>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Pagination Bento Card */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 self-start sm:self-auto">
-             <div className="w-10 h-10 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center border border-slate-100 dark:border-slate-700">
-               <TrendingUp className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+        {/* Confidence Footer Card */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="bg-card/40 backdrop-blur-lg p-7 rounded-[3rem] border border-border shadow-md flex flex-col sm:flex-row items-center justify-between gap-8 relative overflow-hidden"
+        >
+          <div className="absolute bottom-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+          
+          <div className="flex items-center gap-5 self-start sm:self-auto">
+             <div className="w-14 h-14 bg-primary/10 rounded-[1.25rem] flex items-center justify-center border border-primary/20 shadow-inner group">
+               <TrendingUp className="w-7 h-7 text-primary group-hover:scale-110 transition-transform" />
              </div>
              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block -mb-1">Operational Confidence</span>
-                <span className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight">98.4%</span>
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 block -mb-0.5">Integrity Metric</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-foreground tracking-tighter">98.4<span className="text-primary">%</span></span>
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">+2.1% OPTIMAL</span>
+                </div>
              </div>
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
             <Button 
               variant="outline" 
               size="sm" 
               disabled={history.length === 0 || loading}
               onClick={handlePrevPage}
-              className="flex-1 sm:flex-none rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider h-10 px-6"
+              className="flex-1 sm:flex-none rounded-[1.25rem] border-border bg-background/50 text-[10px] font-black uppercase tracking-[0.25em] h-14 px-10 hover:bg-secondary transition-all active:scale-95 shadow-sm border-border/50"
             >
-              <ChevronLeft className="w-4 h-4 mr-2" />
+              <ChevronLeft className="w-4 h-4 mr-3" />
               Prev
             </Button>
             <Button 
@@ -446,20 +564,36 @@ export const Dashboard: React.FC = () => {
               size="sm" 
               disabled={!lastDoc || loading || leads.length < 10}
               onClick={handleNextPage}
-              className="flex-1 sm:flex-none rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider h-10 px-6"
+              className="flex-1 sm:flex-none rounded-[1.25rem] border-border bg-background/50 text-[10px] font-black uppercase tracking-[0.25em] h-14 px-10 hover:bg-secondary transition-all active:scale-95 shadow-sm border-border/50"
             >
               Next
-              <ChevronRight className="w-4 h-4 ml-2" />
+              <ChevronRight className="w-4 h-4 ml-3" />
             </Button>
           </div>
-        </div>
+        </motion.div>
       </main>
 
-      <LeadDialog 
-        open={isDialogOpen} 
+      {/* Decorative Brand Footer */}
+      <footer className="p-12 mt-12 mb-8 flex flex-col items-center gap-6 opacity-30 hover:opacity-100 transition-all duration-700">
+        <div className="flex items-center gap-5">
+           <div className="w-16 h-[1px] bg-gradient-to-l from-foreground/40 to-transparent" />
+           <div className="w-4 h-4 bg-foreground rounded-full animate-pulse border-4 border-background" />
+           <div className="w-16 h-[1px] bg-gradient-to-r from-foreground/40 to-transparent" />
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-[10px] font-black tracking-[0.8em] uppercase text-foreground/80 mr-[-0.8em]">Aura Systems Nexus</span>
+          <p className="text-[8px] font-bold text-muted-foreground/60 uppercase tracking-[0.3em]">Advanced Pipeline Intelligence v2.4.0</p>
+        </div>
+        <div className="text-[8px] text-muted-foreground/40 uppercase tracking-widest font-medium">
+          SECURE PROTOCOL ENABLED // {new Date().getFullYear()}
+        </div>
+      </footer>
+
+      <LeadDialog
+        open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onSubmit={handleCreateOrUpdate}
-        initialData={editingLead}
+        initialData={editingLead || undefined}
       />
     </div>
   );

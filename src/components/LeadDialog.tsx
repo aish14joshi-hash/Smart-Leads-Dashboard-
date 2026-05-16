@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from './ui/select';
 import { Label } from './ui/label';
+import { Plus } from 'lucide-react';
 import { Lead, LeadStatus, LeadSource } from '../types';
 
 const leadSchema = z.object({
@@ -79,61 +80,75 @@ export const LeadDialog: React.FC<LeadDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-            {initialData ? 'Modify Lead Entity' : 'Initialize New Lead'}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+      <DialogContent className="sm:max-w-[480px] rounded-[2.5rem] border-border bg-card/95 backdrop-blur-2xl shadow-3xl p-0 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-transparent via-primary to-transparent" />
+        
+        <div className="p-8 pb-4">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black tracking-tight text-foreground flex items-center gap-3">
+               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                 <Plus className="w-4 h-4 text-primary" />
+               </div>
+               {initialData ? 'Synchronize Entity' : 'Initialize Nexus Record'}
+            </DialogTitle>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1 pl-11">
+               Protocol: {initialData ? 'Modification' : 'Creation'} Sequence
+            </p>
+          </DialogHeader>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="px-8 pb-10 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Full Name</Label>
-            <Input id="name" {...register('name')} className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100" />
-            {errors.name && <p className="text-xs text-red-500 font-medium">{errors.name.message}</p>}
+            <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Full Name Persona</Label>
+            <Input id="name" {...register('name')} className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all focus:ring-primary/20 text-sm font-medium" placeholder="Identity entry..." />
+            {errors.name && <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider pl-1">{errors.name.message}</p>}
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Email Address</Label>
-            <Input id="email" type="email" {...register('email')} className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100" />
-            {errors.email && <p className="text-xs text-red-500 font-medium">{errors.email.message}</p>}
+            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Communication Node (Email)</Label>
+            <Input id="email" type="email" {...register('email')} className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all focus:ring-primary/20 text-sm font-medium" placeholder="Node address..." />
+            {errors.email && <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider pl-1">{errors.email.message}</p>}
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="status" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Status</Label>
+              <Label htmlFor="status" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Status Matrix</Label>
               <Select
                 onValueChange={(v) => setValue('status', v as LeadStatus)}
                 defaultValue={initialData?.status || 'New'}
               >
-                <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100 uppercase text-[10px] font-bold">
-                  <SelectValue placeholder="Select status" />
+                <SelectTrigger className="h-14 rounded-2xl border-border/50 bg-secondary/30 text-[10px] font-black uppercase tracking-widest focus:ring-primary/20">
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl dark:border-slate-800 dark:bg-slate-900">
-                  <SelectItem value="New" className="text-[10px] font-bold uppercase">New</SelectItem>
-                  <SelectItem value="Contacted" className="text-[10px] font-bold uppercase">Contacted</SelectItem>
-                  <SelectItem value="Qualified" className="text-[10px] font-bold uppercase">Qualified</SelectItem>
-                  <SelectItem value="Lost" className="text-[10px] font-bold uppercase">Lost</SelectItem>
+                <SelectContent className="rounded-2xl border-border shadow-2xl p-2 bg-card/95 backdrop-blur-lg">
+                  <SelectItem value="New" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">New</SelectItem>
+                  <SelectItem value="Contacted" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Contacted</SelectItem>
+                  <SelectItem value="Qualified" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Qualified</SelectItem>
+                  <SelectItem value="Lost" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Lost</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="source" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Source</Label>
+              <Label htmlFor="source" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Acquisition Origin</Label>
               <Select
                 onValueChange={(v) => setValue('source', v as LeadSource)}
                 defaultValue={initialData?.source || 'Website'}
               >
-                <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100 uppercase text-[10px] font-bold">
-                  <SelectValue placeholder="Select source" />
+                <SelectTrigger className="h-14 rounded-2xl border-border/50 bg-secondary/30 text-[10px] font-black uppercase tracking-widest focus:ring-primary/20">
+                  <SelectValue placeholder="Source" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl dark:border-slate-800 dark:bg-slate-900">
-                  <SelectItem value="Website" className="text-[10px] font-bold uppercase">Website</SelectItem>
-                  <SelectItem value="Instagram" className="text-[10px] font-bold uppercase">Instagram</SelectItem>
-                  <SelectItem value="Referral" className="text-[10px] font-bold uppercase">Referral</SelectItem>
+                <SelectContent className="rounded-2xl border-border shadow-2xl p-2 bg-card/95 backdrop-blur-lg">
+                  <SelectItem value="Website" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Website</SelectItem>
+                  <SelectItem value="Instagram" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Instagram</SelectItem>
+                  <SelectItem value="Referral" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Referral</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+
           <DialogFooter className="pt-4">
-            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] h-11 shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all">
-              {initialData ? 'Update Entity' : 'Create Entity'}
+            <Button type="submit" className="w-full h-16 bg-primary hover:primary/90 text-primary-foreground rounded-2xl font-black uppercase tracking-[0.25em] text-[10px] shadow-xl shadow-primary/20 transition-all active:scale-[0.98]">
+              {initialData ? 'Execute Update' : 'Initialize Record'}
             </Button>
           </DialogFooter>
         </form>
