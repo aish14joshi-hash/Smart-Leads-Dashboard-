@@ -1,6 +1,6 @@
 {
   "name": "Smart Leads Dashboard",
-  "description": "A comprehensive full-stack lead management dashboard featuring JWT authentication, advanced filtering, and real-time data tracking.",
+  "description": "An AI-powered CRM dashboard built with React, Firebase, and Gemini AI. Features real-time tracking, tactical lead analysis, and secure project management.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

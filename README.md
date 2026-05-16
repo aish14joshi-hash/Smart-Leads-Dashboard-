@@ -38,9 +38,9 @@ An AI-powered CRM dashboard built for high-performance sales teams. This applica
 3. **Environment Variables**:
    Create a `.env.local` file in the root directory and add your Gemini API Key:
    ```env
-   VITE_GEMINI_API_KEY=your_api_key_here
+   GEMINI_API_KEY=your_api_key_here
    ```
-   *(Note: For AI Studio deployments, keys are managed via the Settings menu.)*
+   *(Note: The `VITE_` prefix is not required here because it is handled in `vite.config.ts` via the `define` property.)*
 
 4. **Start the development server**:
    ```bash
