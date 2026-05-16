@@ -1,77 +1,77 @@
-# Smart Leads Dashboard - API & Developer Documentation
+# Smart Leads Dashboard
 
-Welcome to the **Smart Leads Dashboard** documentation. This document outlines the architecture, data models, and service interfaces for the application.
+An AI-powered CRM dashboard built for high-performance sales teams. This application leverages the Google Gemini API to provide tactical insights on sales leads and uses Firebase for real-time data management.
 
-## 1. System Architecture
-The application is built as a highly responsive full-stack web application using the following stack:
-- **Frontend**: React 18+ with Vite (TypeScript).
-- **Styling**: Tailwind CSS with custom thematic variables for a technical, high-contrast UI.
-- **Backend**: Firebase (Firestore & Authentication).
-- **Intelligence Layer**: Google Gemini API for tactical lead analysis.
+## 🚀 Live Demo
+**[View Live Application](https://ais-pre-k755eeal7mkqov4xswmazx-232873291335.asia-east1.run.app)**
 
 ---
 
-## 2. Data Models (Firestore)
-
-### Lead Entity
-The primary record in the system representing a potential customer.
-- **Path**: `/leads/{leadId}`
-- **Fields**:
-  - `id`: Unique identifier (string).
-  - `name`: Full name of the lead (string).
-  - `email`: Contact email address (string).
-  - `phone`: Contact phone number (string).
-  - `status`: Lifecycle state (`New` | `Contacted` | `Qualified` | `Lost`).
-  - `source`: Acquisition origin (`Website` | `Instagram` | `Referral` | `LinkedIn` | `Facebook` | `Cold Call`).
-  - `qualityScore`: Relative lead importance (number, 1-10).
-  - `notes`: Custom textual context (string).
-  - `smartInsight`: AI-generated tactical strategy (string, optional).
-  - `createdAt`: Server-side creation timestamp.
-  - `updatedAt`: Last modification timestamp.
-  - `createdBy`: UID of the user who created the lead.
-
-### User Entity
-Internal record for application users and permissions.
-- **Path**: `/users/{userId}`
-- **Fields**:
-  - `uid`: Firebase Auth UID.
-  - `email`: Authenticated email address.
-  - `role`: Permission level (`Admin` | `Sales User`).
-  - `name`: Display name.
+## 🛠 Features
+- **Smart Lead Analysis**: Uses Gemini 2.0 Flash to generate 3 bullet-point tactical strategies for every lead.
+- **Real-time Synchronization**: Powered by Firestore snapshots for immediate updates across all clients.
+- **Advanced Filtering**: Filter by status, source, and smart search.
+- **Quality Scoring**: Visual indicators for lead potential.
+- **Secure Authentication**: Protected via Firebase Auth and granular Security Rules.
 
 ---
 
-## 3. Core Services API
+## ⚙️ Setup Instructions
 
-### `leadService` (Internal)
-Located at `src/services/leadService.ts`, this service handles all direct interactions with the Firestore `leads` collection.
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn
+- A Google Cloud/Firebase project
 
-| Method | Parameters | Description |
-| :--- | :--- | :--- |
-| `createLead` | `leadData` | Creates a new lead with server timestamps and auth tracking. |
-| `updateLead` | `id`, `leadData` | Updates existing lead attributes. |
-| `deleteLead` | `id` | Permanently removes a lead record. |
-| `getLeads` | `filters` | Queries leads with support for filtering, sorting, pagination, and client-side searching. |
+### Local Installation
+1. **Clone the repository**:
+   ```bash
+   git clone <your-repo-url>
+   cd smart-leads-dashboard
+   ```
 
-### `geminiService` (Intelligence)
-Located at `src/services/geminiService.ts`, this service interfaces with the Gemini 2.0 Flash model.
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-| Method | Parameters | Return | Description |
-| :--- | :--- | :--- | :--- |
-| `analyzeLead` | `lead` | `string` (3 Bullet Points) | Analyzes lead context to provide tactical sales strategies. |
+3. **Environment Variables**:
+   Create a `.env.local` file in the root directory and add your Gemini API Key:
+   ```env
+   VITE_GEMINI_API_KEY=your_api_key_here
+   ```
+   *(Note: For AI Studio deployments, keys are managed via the Settings menu.)*
+
+4. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+   The app will be available at `http://localhost:3000`.
 
 ---
 
-## 4. Configuration & Environment
-The following environment variables are required to be set in the build environment:
+## 📖 API Documentation
 
-- `GEMINI_API_KEY`: API key for Google Generative AI access.
-- `FIREBASE_CONFIG`: Handled automatically via `firebase-applet-config.json`.
+### Data Models (Firestore)
+- **Leads Collection (`/leads`)**: Stores lead profile, source, status, and AI-generated `smartInsight`.
+- **Users Collection (`/users`)**: Stores user roles and profiles.
+
+### Key Logic & Services
+- **`leadService.ts`**: Handles CRUD operations and complex queries on Firestore.
+- **`geminiService.ts`**: Manages the integration with `@google/genai` for lead analysis.
 
 ---
 
-## 5. Security Protocols
-Security is enforced at the database level via **Firestore Security Rules**:
-1. **Master Gate**: All reads/writes require authentication.
-2. **Identity Integrity**: Users can only modify fields if they match standard validation rules.
-3. **Data Protection**: PII like email and phone are guarded by auth checks.
+## 🛡️ Security
+The application implements strict **Firestore Security Rules** to ensure:
+- Users can only read/write their own data (or as authorized).
+- Mandatory data validation on all writes.
+- Protection against PII leaks.
+
+---
+
+## 📁 Repository Structure
+- `src/components/`: UI components (Dashboard, LeadDialog, etc.)
+- `src/services/`: Backend service integrations (Firebase, Gemini)
+- `src/hooks/`: Custom React hooks for data fetching and state.
+- `firestore.rules`: Security configuration.
