@@ -8,7 +8,7 @@ export interface UserProfile {
 }
 
 export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Lost';
-export type LeadSource = 'Website' | 'Instagram' | 'Referral';
+export type LeadSource = 'Website' | 'Instagram' | 'Referral' | 'LinkedIn' | 'Facebook' | 'Cold Call';
 
 export interface Lead {
   id?: string;
@@ -18,9 +18,11 @@ export interface Lead {
   notes: string;
   status: LeadStatus;
   source: LeadSource;
+  qualityScore?: number; // 1-10
   createdAt: any; // Firestore Timestamp
   updatedAt?: any;
   createdBy: string;
+  smartInsight?: string;
 }
 
 export enum OperationType {

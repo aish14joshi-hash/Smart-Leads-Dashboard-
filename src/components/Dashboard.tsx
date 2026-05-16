@@ -35,6 +35,17 @@ import { leadService } from '../services/leadService';
 import { Lead, LeadStatus, LeadSource } from '../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { 
+  collection, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  where, 
+  limit,
+  Timestamp 
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { geminiService } from '../services/geminiService';
 import {
   Table,
   TableBody,
@@ -72,12 +83,37 @@ export const Dashboard: React.FC = () => {
   const [lastDoc, setLastDoc] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch] = useDebounce(searchTerm, 500);
+
+  // Real-time synchronization
+  useEffect(() => {
+    const q = query(
+      collection(db, 'leads'),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allLeads = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Lead[];
+      
+      // Update local state if no active filtering/searching that requires complex server logic
+      if (!searchTerm && statusFilter === 'all' && sourceFilter === 'all') {
+        setLeads(allLeads.slice(0, 10));
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [searchTerm, statusFilter, sourceFilter]);
 
   const fetchLeads = async (reset = false) => {
     setLoading(true);
@@ -176,6 +212,21 @@ export const Dashboard: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     toast.success('Data extraction complete');
+  };
+
+  const handleAIAnalysis = async (lead: Lead) => {
+    if (!lead.id) return;
+    setAnalyzingId(lead.id);
+    try {
+      const insight = await geminiService.analyzeLead(lead);
+      // Update local state temporarily to show result
+      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, smartInsight: insight } : l));
+      toast.success('Intelligence analysis complete');
+    } catch (error) {
+      toast.error('AI Protocol failure');
+    } finally {
+      setAnalyzingId(null);
+    }
   };
 
   const stats = useMemo(() => {
@@ -424,6 +475,9 @@ export const Dashboard: React.FC = () => {
                   <SelectItem value="all" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">All Sources</SelectItem>
                   <SelectItem value="Website" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Website</SelectItem>
                   <SelectItem value="Instagram" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Instagram</SelectItem>
+                  <SelectItem value="LinkedIn" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">LinkedIn</SelectItem>
+                  <SelectItem value="Facebook" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Facebook</SelectItem>
+                  <SelectItem value="Cold Call" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Cold Call</SelectItem>
                   <SelectItem value="Referral" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Referral</SelectItem>
                 </SelectContent>
               </Select>
@@ -494,10 +548,9 @@ export const Dashboard: React.FC = () => {
               <TableHeader className="bg-secondary/40 backdrop-blur-md">
                 <TableRow className="hover:bg-transparent border-border">
                   <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 py-6 px-10 h-auto">Entity Persona</TableHead>
-                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto">Communication Node</TableHead>
-                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto">Contact Protocol</TableHead>
-                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-center">Status Matrix</TableHead>
-                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-center">Origin</TableHead>
+                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto">Communications</TableHead>
+                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto">Status Matrix</TableHead>
+                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-center">Nexus Intel</TableHead>
                   <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-right pr-10">Registration</TableHead>
                   <TableHead className="w-[100px] h-auto pr-10"></TableHead>
                 </TableRow>
@@ -556,27 +609,46 @@ export const Dashboard: React.FC = () => {
                            </div>
                            <div className="flex flex-col">
                              <span className="text-[13px] font-bold tracking-tight">{lead.name}</span>
-                             <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-[0.05em] opacity-60">ID: {lead.id?.slice(0, 8)}</span>
+                             <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-[0.05em] opacity-60">{lead.source}</span>
                            </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground font-medium tracking-tight">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500/40" />
-                          {lead.email}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground font-medium tracking-tight">
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-3 h-3 opacity-40" />
-                          {lead.phone}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
+                             <span className="text-[11px]">{lead.email}</span>
+                          </div>
+                          <div className="flex items-center gap-2 opacity-60">
+                             <Phone className="w-2.5 h-2.5" />
+                             <span className="text-[10px]">{lead.phone}</span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">{getStatusBadge(lead.status)}</TableCell>
                       <TableCell className="text-center">
-                        <span className="text-[10px] px-4 py-1.5 bg-secondary/80 text-foreground rounded-2xl font-black uppercase tracking-[0.15em] border border-border shadow-sm group-hover/row:border-primary/20 transition-colors">
-                          {lead.source}
-                        </span>
+                        {lead.smartInsight ? (
+                          <div className="max-w-[200px] text-[9px] text-left mx-auto bg-secondary/50 p-2 rounded-lg border border-primary/10 italic text-muted-foreground line-clamp-2 hover:line-clamp-none transition-all">
+                            {lead.smartInsight}
+                          </div>
+                        ) : (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            disabled={analyzingId === lead.id}
+                            onClick={() => handleAIAnalysis(lead)}
+                            className="h-8 rounded-lg text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 group/ai"
+                          >
+                            {analyzingId === lead.id ? (
+                              <div className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="w-3 h-3 group-hover/ai:animate-pulse" />
+                                Extract Intel
+                              </div>
+                            )}
+                          </Button>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-[10px] font-black uppercase text-right pr-10 whitespace-nowrap opacity-60 group-hover/row:opacity-90 transition-opacity">
                         {lead.createdAt?.seconds 

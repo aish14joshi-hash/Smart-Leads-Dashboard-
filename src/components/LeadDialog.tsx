@@ -28,7 +28,8 @@ const leadSchema = z.object({
   phone: z.string().min(8, 'Phone number must be at least 8 digits'),
   notes: z.string().optional(),
   status: z.enum(['New', 'Contacted', 'Qualified', 'Lost']),
-  source: z.enum(['Website', 'Instagram', 'Referral']),
+  source: z.enum(['Website', 'Instagram', 'Referral', 'LinkedIn', 'Facebook', 'Cold Call']),
+  qualityScore: z.number().min(1).max(10),
 });
 
 type LeadFormValues = z.infer<typeof leadSchema>;
@@ -61,6 +62,7 @@ export const LeadDialog: React.FC<LeadDialogProps> = ({
       notes: '',
       status: 'New',
       source: 'Website',
+      qualityScore: 5,
     },
   });
 
@@ -73,6 +75,7 @@ export const LeadDialog: React.FC<LeadDialogProps> = ({
         notes: initialData.notes || '',
         status: initialData.status,
         source: initialData.source,
+        qualityScore: initialData.qualityScore ?? 5,
       });
     } else {
       reset({
@@ -131,6 +134,17 @@ export const LeadDialog: React.FC<LeadDialogProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="qualityScore" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Quality Metric (1-10)</Label>
+              <Input 
+                id="qualityScore" 
+                type="number" 
+                {...register('qualityScore', { valueAsNumber: true })} 
+                className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all focus:ring-primary/20 text-sm font-medium" 
+                min="1" 
+                max="10" 
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="status" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Status Matrix</Label>
               <Select
                 onValueChange={(v) => setValue('status', v as LeadStatus)}
@@ -160,6 +174,9 @@ export const LeadDialog: React.FC<LeadDialogProps> = ({
                   <SelectItem value="Website" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Website</SelectItem>
                   <SelectItem value="Instagram" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Instagram</SelectItem>
                   <SelectItem value="Referral" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Referral</SelectItem>
+                  <SelectItem value="LinkedIn" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">LinkedIn</SelectItem>
+                  <SelectItem value="Facebook" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Facebook</SelectItem>
+                  <SelectItem value="Cold Call" className="text-[10px] font-bold uppercase tracking-widest rounded-lg">Cold Call</SelectItem>
                 </SelectContent>
               </Select>
             </div>
