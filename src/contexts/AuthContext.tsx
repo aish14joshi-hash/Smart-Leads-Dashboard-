@@ -6,7 +6,9 @@ import {
   signOut, 
   User,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -18,7 +20,9 @@ interface AuthContextType {
   loading: boolean;
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUp: (email: string, pass: string, name: string) => Promise<void>;
+  signInWithIdentifier: (identifier: string, pass: string) => Promise<void>;
+  signUp: (email: string, pass: string, name: string, username: string, phone: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -65,19 +69,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithEmailAndPassword(auth, email, pass);
   };
 
-  const signUp = async (email: string, pass: string, name: string) => {
+  const signInWithIdentifier = async (identifier: string, pass: string) => {
+    let email = identifier;
+    
+    // If it doesn't look like an email, try lookup
+    if (!identifier.includes('@')) {
+      const indexDoc = await getDoc(doc(db, 'user_indices', identifier.toLowerCase()));
+      if (indexDoc.exists()) {
+        email = indexDoc.data().email;
+      }
+    }
+    
+    await signInWithEmailAndPassword(auth, email, pass);
+  };
+
+  const signUp = async (email: string, pass: string, name: string, username: string, phone: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const firebaseUser = userCredential.user;
     
-    // Create profile immediately for new email signups
+    // Update firebase profile with name
+    await updateProfile(firebaseUser, { displayName: name });
+    
+    const lowerUsername = username.toLowerCase();
+    
+    // Create profile
     const newProfile: UserProfile = {
       uid: firebaseUser.uid,
       email: email,
+      username: username,
+      phone: phone,
       role: 'Sales User',
       name: name
     };
+    
+    // Save profile and indices for lookup
     await setDoc(doc(db, 'users', firebaseUser.uid), newProfile);
+    
+    // Index by username and phone if provided
+    if (username) {
+      await setDoc(doc(db, 'user_indices', lowerUsername), { email: email.toLowerCase(), type: 'username' });
+    }
+    if (phone) {
+      await setDoc(doc(db, 'user_indices', phone), { email: email.toLowerCase(), type: 'phone' });
+    }
+    
     setProfile(newProfile);
+  };
+
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
   };
 
   const logout = async () => {
@@ -85,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signInWithEmail, signUp, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signInWithEmail, signInWithIdentifier, signUp, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

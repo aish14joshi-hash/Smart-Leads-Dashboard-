@@ -13,18 +13,26 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  identifier: z.string().min(3, 'Sign-in identity must be at least 3 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-const signupSchema = loginSchema.extend({
+const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  username: z.string().min(3, 'Username must be at least 3 characters').regex(/^[a-z0-9_.]+$/, 'Only lowercase, numbers, dots, or underscores'),
+  phone: z.string().min(8, 'Phone number must be at least 8 digits'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-type LoginMode = 'initial' | 'email-login' | 'email-signup';
+const resetSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+type LoginMode = 'initial' | 'email-login' | 'email-signup' | 'forgot-password';
 
 export const Login: React.FC = () => {
-  const { signIn, signInWithEmail, signUp } = useAuth();
+  const { signIn, signInWithEmail, signInWithIdentifier, signUp, resetPassword } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<LoginMode>('initial');
@@ -35,6 +43,10 @@ export const Login: React.FC = () => {
 
   const { register: signupRegister, handleSubmit: handleSignupSubmit, formState: { errors: signupErrors } } = useForm({
     resolver: zodResolver(signupSchema)
+  });
+
+  const { register: resetRegister, handleSubmit: handleResetSubmit, formState: { errors: resetErrors } } = useForm({
+    resolver: zodResolver(resetSchema)
   });
 
   const handleGoogleLogin = async () => {
@@ -53,7 +65,7 @@ export const Login: React.FC = () => {
   const onEmailLogin = async (data: any) => {
     setLoading(true);
     try {
-      await signInWithEmail(data.email, data.password);
+      await signInWithIdentifier(data.identifier, data.password);
       toast.success('Login successful: Nexus access granted');
     } catch (error: any) {
       console.error(error);
@@ -73,7 +85,7 @@ export const Login: React.FC = () => {
   const onEmailSignup = async (data: any) => {
     setLoading(true);
     try {
-      await signUp(data.email, data.password, data.name);
+      await signUp(data.email, data.password, data.name, data.username, data.phone);
       toast.success('Account initialized: Identity created');
     } catch (error: any) {
       console.error(error);
@@ -90,6 +102,20 @@ export const Login: React.FC = () => {
       } else {
         toast.error(`Creation failed: ${error.message || 'Error occurred'}`);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onResetPassword = async (data: any) => {
+    setLoading(true);
+    try {
+      await resetPassword(data.email);
+      toast.success('Signal broadcasted: Password reset link sent to your node.');
+      setMode('email-login');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(`Broadcast failure: ${error.message || 'Reset sequence failed'}`);
     } finally {
       setLoading(false);
     }
@@ -155,7 +181,7 @@ export const Login: React.FC = () => {
                 SmartLeads <span className="text-primary italic">Nexus</span>
               </CardTitle>
               <CardDescription className="text-muted-foreground font-bold uppercase tracking-[0.2em] text-[10px]">
-                {mode === 'initial' ? 'Authorized Entry Portal' : mode === 'email-login' ? 'Nexus Credential Gateway' : 'Identity Initialization'}
+                {mode === 'initial' ? 'Authorized Entry Portal' : mode === 'email-login' ? 'Nexus Credential Gateway' : mode === 'email-signup' ? 'Identity Initialization' : 'Password Recovery Protocol'}
               </CardDescription>
             </div>
           </CardHeader>
@@ -222,16 +248,25 @@ export const Login: React.FC = () => {
                 >
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Signal (Email)</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Nexus Identity (Email, Username, or Mobile)</Label>
                       <Input 
-                        {...loginRegister('email')}
+                        {...loginRegister('identifier')}
                         className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
-                        placeholder="Nexus identity..."
+                        placeholder="Type signal identity..."
                       />
-                      {loginErrors.email && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{loginErrors.email.message as string}</p>}
+                      {loginErrors.identifier && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{loginErrors.identifier.message as string}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Pass-key (Password)</Label>
+                      <div className="flex items-center justify-between pl-1">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pass-key (Password)</Label>
+                        <button 
+                          type="button"
+                          onClick={() => setMode('forgot-password')}
+                          className="text-[9px] font-bold text-primary hover:underline uppercase tracking-widest"
+                        >
+                          Recover Key?
+                        </button>
+                      </div>
                       <Input 
                         type="password"
                         {...loginRegister('password')}
@@ -254,7 +289,7 @@ export const Login: React.FC = () => {
                     )}
                   </Button>
                 </motion.form>
-              ) : (
+              ) : mode === 'email-signup' ? (
                 <motion.form 
                   key="signup"
                   initial={{ opacity: 0, y: 10 }}
@@ -263,7 +298,7 @@ export const Login: React.FC = () => {
                   onSubmit={handleSignupSubmit(onEmailSignup)}
                   className="space-y-6"
                 >
-                  <div className="space-y-4">
+                    <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Identity Persona (Name)</Label>
                       <Input 
@@ -273,14 +308,36 @@ export const Login: React.FC = () => {
                       />
                       {signupErrors.name && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{signupErrors.name.message as string}</p>}
                     </div>
+
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Signal (Email)</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Core Signal (Email)</Label>
                       <Input 
                         {...signupRegister('email')}
                         className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
-                        placeholder="Nexus identity..."
+                        placeholder="nexus@identity.com"
                       />
                       {signupErrors.email && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{signupErrors.email.message as string}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Alias (Username)</Label>
+                        <Input 
+                          {...signupRegister('username')}
+                          className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
+                          placeholder="unique_id"
+                        />
+                        {signupErrors.username && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{signupErrors.username.message as string}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Mobile</Label>
+                        <Input 
+                          {...signupRegister('phone')}
+                          className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
+                          placeholder="+00..."
+                        />
+                        {signupErrors.phone && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{signupErrors.phone.message as string}</p>}
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Pass-key (Password)</Label>
@@ -303,6 +360,42 @@ export const Login: React.FC = () => {
                       <div className="h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                     ) : (
                       'Initialize Record'
+                    )}
+                  </Button>
+                </motion.form>
+              ) : (
+                <motion.form 
+                  key="forgot-password"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  onSubmit={handleResetSubmit(onResetPassword)}
+                  className="space-y-6"
+                >
+                  <div className="space-y-4">
+                    <p className="text-[10px] text-muted-foreground px-2 text-center uppercase tracking-widest font-bold leading-relaxed">
+                      Enter your identity signal to receive a recovery broadcast link.
+                    </p>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Signal (Email)</Label>
+                      <Input 
+                        {...resetRegister('email')}
+                        className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
+                        placeholder="Nexus identity..."
+                      />
+                      {resetErrors.email && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{resetErrors.email.message as string}</p>}
+                    </div>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full h-16 text-[11px] font-black uppercase tracking-[0.2em] bg-primary text-primary-foreground rounded-[1.25rem] shadow-xl shadow-primary/20 active:scale-[0.98]"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <div className="h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    ) : (
+                      'Initialize Recovery'
                     )}
                   </Button>
                 </motion.form>

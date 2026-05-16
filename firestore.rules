@@ -41,11 +41,17 @@ service cloud.firestore {
           && data.email is string && data.email.size() <= 256;
       }
 
-      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data);
+      allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && (
-        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) ||
+        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name', 'username', 'phone'])) ||
         isAdmin()
       );
+    }
+
+    // --- User Indices (Public lookup for login) ---
+    match /user_indices/{indexId} {
+      allow get: if true;
+      allow create: if isSignedIn();
     }
 
     // --- Leads Collection ---
