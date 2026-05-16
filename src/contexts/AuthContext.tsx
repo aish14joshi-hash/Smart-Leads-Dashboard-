@@ -21,8 +21,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signInWithIdentifier: (identifier: string, pass: string) => Promise<void>;
-  signUp: (email: string, pass: string, name: string, username: string, phone: string) => Promise<void>;
+  signUp: (email: string, pass: string, name: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -85,64 +84,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), pass);
   };
 
-  const signInWithIdentifier = async (identifier: string, pass: string) => {
-    const emailInput = identifier.trim();
-    let finalEmail = emailInput;
-    
-    // If it doesn't look like an email, try lookup
-    if (!emailInput.includes('@')) {
-      const cleanIdentifier = emailInput.toLowerCase().replace(/\s/g, ''); 
-      const path = `user_indices/${cleanIdentifier}`;
-      try {
-        const indexDoc = await getDocFromServer(doc(db, 'user_indices', cleanIdentifier));
-        if (indexDoc.exists()) {
-          finalEmail = indexDoc.data().email;
-        } else {
-          throw new Error('Identity not recognized: Please check your username or mobile number.');
-        }
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('Identity not recognized')) {
-          throw error;
-        }
-        handleFirestoreError(error, OperationType.GET, path);
-      }
-    }
-    
-    await signInWithEmailAndPassword(auth, finalEmail.toLowerCase(), pass);
-  };
-
-  const signUp = async (email: string, pass: string, name: string, username: string, phone: string) => {
+  const signUp = async (email: string, pass: string, name: string) => {
     const cleanEmail = email.trim().toLowerCase();
-    const cleanUsername = username.trim().toLowerCase();
-    const cleanPhone = phone.replace(/\D/g, ''); // Digits only for index
     
-    // 1. Check availability
-    if (cleanUsername) {
-      const usernamePath = `user_indices/${cleanUsername}`;
-      try {
-        const usernameDoc = await getDocFromServer(doc(db, 'user_indices', cleanUsername)).catch(() => null);
-        if (usernameDoc?.exists()) {
-          throw new Error('Alias already claimed by another node.');
-        }
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('claimed')) throw error;
-        handleFirestoreError(error, OperationType.GET, usernamePath);
-      }
-    }
-
-    if (cleanPhone) {
-      const phonePath = `user_indices/${cleanPhone}`;
-      try {
-        const phoneDoc = await getDocFromServer(doc(db, 'user_indices', cleanPhone)).catch(() => null);
-        if (phoneDoc?.exists()) {
-          throw new Error('Signal (mobile) already registered.');
-        }
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('registered')) throw error;
-        handleFirestoreError(error, OperationType.GET, phonePath);
-      }
-    }
-
     // 2. Auth Creation
     const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
     const firebaseUser = userCredential.user;
@@ -150,30 +94,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Update firebase profile with name
     await updateProfile(firebaseUser, { displayName: name });
     
-    // 3. Atomic Data Creation
-    const batch = writeBatch(db);
+    // 3. Data Creation
     const profilePath = `users/${firebaseUser.uid}`;
     
     const newProfile: UserProfile = {
       uid: firebaseUser.uid,
       email: cleanEmail,
-      username: cleanUsername,
-      phone: phone.trim(),
       role: 'Sales User',
       name: name.trim()
     };
     
-    batch.set(doc(db, 'users', firebaseUser.uid), newProfile);
-    
-    if (cleanUsername) {
-      batch.set(doc(db, 'user_indices', cleanUsername), { uid: firebaseUser.uid, email: cleanEmail, type: 'username' });
-    }
-    if (cleanPhone) {
-      batch.set(doc(db, 'user_indices', cleanPhone), { uid: firebaseUser.uid, email: cleanEmail, type: 'phone' });
-    }
-
     try {
-      await batch.commit();
+      await setDoc(doc(db, 'users', firebaseUser.uid), newProfile);
       setProfile(newProfile);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, profilePath);
@@ -189,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signInWithEmail, signInWithIdentifier, signUp, resetPassword, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signInWithEmail, signUp, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

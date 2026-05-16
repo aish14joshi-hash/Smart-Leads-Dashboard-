@@ -43,17 +43,9 @@ service cloud.firestore {
 
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && (
-        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name', 'username', 'phone'])) ||
+        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) ||
         isAdmin()
       );
-    }
-
-    // --- User Indices (Public lookup for login) ---
-    match /user_indices/{indexId} {
-      allow get: if true;
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update: if isSignedIn() && resource.data.uid == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
     // --- Leads Collection ---
