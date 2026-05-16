@@ -102,7 +102,8 @@ export const leadService = {
         const term = filters.search.toLowerCase();
         leads = leads.filter(l => 
           l.name.toLowerCase().includes(term) || 
-          l.email.toLowerCase().includes(term)
+          l.email.toLowerCase().includes(term) ||
+          l.phone.toLowerCase().includes(term)
         );
       }
 

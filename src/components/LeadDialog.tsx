@@ -25,6 +25,8 @@ import { Lead, LeadStatus, LeadSource } from '../types';
 const leadSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
+  phone: z.string().min(8, 'Phone number must be at least 8 digits'),
+  notes: z.string().optional(),
   status: z.enum(['New', 'Contacted', 'Qualified', 'Lost']),
   source: z.enum(['Website', 'Instagram', 'Referral']),
 });
@@ -55,6 +57,8 @@ export const LeadDialog: React.FC<LeadDialogProps> = ({
     defaultValues: {
       name: '',
       email: '',
+      phone: '',
+      notes: '',
       status: 'New',
       source: 'Website',
     },
@@ -65,6 +69,8 @@ export const LeadDialog: React.FC<LeadDialogProps> = ({
       reset({
         name: initialData.name,
         email: initialData.email,
+        phone: initialData.phone || '',
+        notes: initialData.notes || '',
         status: initialData.status,
         source: initialData.source,
       });
@@ -72,6 +78,8 @@ export const LeadDialog: React.FC<LeadDialogProps> = ({
       reset({
         name: '',
         email: '',
+        phone: '',
+        notes: '',
         status: 'New',
         source: 'Website',
       });
@@ -108,6 +116,17 @@ export const LeadDialog: React.FC<LeadDialogProps> = ({
             <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Communication Node (Email)</Label>
             <Input id="email" type="email" {...register('email')} className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all focus:ring-primary/20 text-sm font-medium" placeholder="Node address..." />
             {errors.email && <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider pl-1">{errors.email.message}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Contact Protocol (Phone)</Label>
+            <Input id="phone" {...register('phone')} className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all focus:ring-primary/20 text-sm font-medium" placeholder="Signal frequency..." />
+            {errors.phone && <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider pl-1">{errors.phone.message}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Encrypted Log Content (Notes)</Label>
+            <Input id="notes" {...register('notes')} className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all focus:ring-primary/20 text-sm font-medium" placeholder="Memory buffer..." />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

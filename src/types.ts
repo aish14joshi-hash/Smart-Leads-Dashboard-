@@ -14,6 +14,8 @@ export interface Lead {
   id?: string;
   name: string;
   email: string;
+  phone: string;
+  notes: string;
   status: LeadStatus;
   source: LeadSource;
   createdAt: any; // Firestore Timestamp

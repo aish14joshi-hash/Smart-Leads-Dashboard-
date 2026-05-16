@@ -17,8 +17,18 @@ import {
   UserPlus,
   Sun,
   Moon,
-  Sparkles
+  Sparkles,
+  PieChart as PieChartIcon,
+  Phone
 } from 'lucide-react';
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  ResponsiveContainer, 
+  Tooltip, 
+  Legend 
+} from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { leadService } from '../services/leadService';
@@ -143,12 +153,14 @@ export const Dashboard: React.FC = () => {
   };
 
   const exportToCSV = () => {
-    const headers = ['Name', 'Email', 'Status', 'Source', 'Created At'];
+    const headers = ['Name', 'Email', 'Phone', 'Status', 'Source', 'Notes', 'Created At'];
     const rows = leads.map(l => [
       l.name,
       l.email,
+      l.phone,
       l.status,
       l.source,
+      l.notes || '',
       new Date(l.createdAt?.seconds * 1000).toLocaleString()
     ]);
 
@@ -167,11 +179,19 @@ export const Dashboard: React.FC = () => {
   };
 
   const stats = useMemo(() => {
+    const distribution = [
+      { name: 'New', value: leads.filter(l => l.status === 'New').length, color: '#6366f1' },
+      { name: 'Contacted', value: leads.filter(l => l.status === 'Contacted').length, color: '#8b5cf6' },
+      { name: 'Qualified', value: leads.filter(l => l.status === 'Qualified').length, color: '#10b981' },
+      { name: 'Lost', value: leads.filter(l => l.status === 'Lost').length, color: '#ef4444' },
+    ].filter(d => d.value > 0);
+
     return {
       total: leads.length,
       new: leads.filter(l => l.status === 'New').length,
       qualified: leads.filter(l => l.status === 'Qualified').length,
       lost: leads.filter(l => l.status === 'Lost').length,
+      distribution
     };
   }, [leads]);
 
@@ -266,45 +286,102 @@ export const Dashboard: React.FC = () => {
 
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-8 z-10 transition-all">
         {/* Bento Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {[
-            { label: 'Pipeline', value: stats.total, icon: Users, color: 'text-primary', bg: 'bg-primary/5', trend: 'Record Count' },
-            { label: 'New Entities', value: stats.new, icon: UserPlus, color: 'text-indigo-500', bg: 'bg-indigo-500/5', progress: true, trend: 'Active Leads' },
-            { label: 'Conversion', value: `${Math.round((stats.qualified / (stats.total || 1)) * 100)}%`, icon: UserCheck, color: 'text-emerald-500', bg: 'bg-emerald-500/5', trend: `${stats.qualified} Qualified` },
-            { label: 'Risk factor', value: stats.lost, icon: UserX, color: 'text-red-500', bg: 'bg-red-500/5', trend: 'Lost Potential' }
-          ].map((stat, idx) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1, duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-            >
-              <Card className="rounded-[2rem] border-border shadow-md overflow-hidden bg-card hover:shadow-2xl transition-all duration-500 group border-border/50">
-                <CardHeader className={`flex flex-row items-center justify-between space-y-0 p-5 pb-3 ${stat.bg} border-b border-border/30`}>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{stat.label}</span>
-                  <stat.icon className={`h-4 w-4 ${stat.color} opacity-70 group-hover:scale-125 group-hover:rotate-6 transition-all duration-500`} />
-                </CardHeader>
-                <CardContent className="pt-6 pb-8">
-                  <div className="text-3xl sm:text-4xl font-black text-foreground tracking-tighter">{stat.value}</div>
-                  {stat.progress ? (
-                    <div className="mt-4 h-2 w-full bg-secondary rounded-full overflow-hidden border border-border/50">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(stats.new / (stats.total || 1)) * 100}%` }}
-                        transition={{ duration: 1.5, delay: 0.5, ease: "circOut" }}
-                        className="h-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 flex-1">
+            {[
+              { label: 'Pipeline', value: stats.total, icon: Users, color: 'text-primary', bg: 'bg-primary/5', trend: 'Record Count' },
+              { label: 'New Entities', value: stats.new, icon: UserPlus, color: 'text-indigo-500', bg: 'bg-indigo-500/5', progress: true, trend: 'Active Leads' },
+              { label: 'Conversion', value: `${Math.round((stats.qualified / (stats.total || 1)) * 100)}%`, icon: UserCheck, color: 'text-emerald-500', bg: 'bg-emerald-500/5', trend: `${stats.qualified} Qualified` },
+              { label: 'Risk factor', value: stats.lost, icon: UserX, color: 'text-red-500', bg: 'bg-red-500/5', trend: 'Lost Potential' }
+            ].map((stat, idx) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1, duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+              >
+                <Card className="rounded-[2rem] border-border shadow-md overflow-hidden bg-card hover:shadow-2xl transition-all duration-500 group border-border/50">
+                  <CardHeader className={`flex flex-row items-center justify-between space-y-0 p-5 pb-3 ${stat.bg} border-b border-border/30`}>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{stat.label}</span>
+                    <stat.icon className={`h-4 w-4 ${stat.color} opacity-70 group-hover:scale-125 group-hover:rotate-6 transition-all duration-500`} />
+                  </CardHeader>
+                  <CardContent className="pt-6 pb-8">
+                    <div className="text-3xl sm:text-4xl font-black text-foreground tracking-tighter">{stat.value}</div>
+                    {stat.progress ? (
+                      <div className="mt-4 h-2 w-full bg-secondary rounded-full overflow-hidden border border-border/50">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(stats.new / (stats.total || 1)) * 100}%` }}
+                          transition={{ duration: 1.5, delay: 0.5, ease: "circOut" }}
+                          className="h-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-3">
+                        <Sparkles className={`w-3 h-3 ${stat.color} opacity-40`} />
+                        <p className={`text-[10px] ${stat.color} font-bold uppercase tracking-widest opacity-80`}>{stat.trend}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:w-[350px]"
+          >
+            <Card className="rounded-[2.5rem] border-border shadow-2xl bg-card overflow-hidden h-full flex flex-col">
+              <CardHeader className="p-6 pb-2">
+                 <div className="flex items-center gap-3">
+                   <PieChartIcon className="w-4 h-4 text-primary" />
+                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Nexus Distribution</span>
+                 </div>
+              </CardHeader>
+              <CardContent className="flex-1 flex items-center justify-center p-0">
+                <div className="w-full h-[220px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.distribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {stats.distribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                          border: 'none', 
+                          borderRadius: '12px',
+                          fontSize: '10px',
+                          color: '#fff'
+                        }} 
                       />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 mt-3">
-                      <Sparkles className={`w-3 h-3 ${stat.color} opacity-40`} />
-                      <p className={`text-[10px] ${stat.color} font-bold uppercase tracking-widest opacity-80`}>{stat.trend}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+              <div className="p-6 pt-0 border-t border-border/10">
+                 <div className="grid grid-cols-2 gap-4 mt-6">
+                    {stats.distribution.map((d) => (
+                      <div key={d.name} className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/80">{d.name}</span>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Filters & Actions Bento Container */}
@@ -418,6 +495,7 @@ export const Dashboard: React.FC = () => {
                 <TableRow className="hover:bg-transparent border-border">
                   <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 py-6 px-10 h-auto">Entity Persona</TableHead>
                   <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto">Communication Node</TableHead>
+                  <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto">Contact Protocol</TableHead>
                   <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-center">Status Matrix</TableHead>
                   <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-center">Origin</TableHead>
                   <TableHead className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 h-auto text-right pr-10">Registration</TableHead>
@@ -486,6 +564,12 @@ export const Dashboard: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-emerald-500/40" />
                           {lead.email}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground font-medium tracking-tight">
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-3 h-3 opacity-40" />
+                          {lead.phone}
                         </div>
                       </TableCell>
                       <TableCell className="text-center">{getStatusBadge(lead.status)}</TableCell>

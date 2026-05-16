@@ -51,9 +51,11 @@ service cloud.firestore {
     // --- Leads Collection ---
     match /leads/{leadId} {
       function isValidLead(data) {
-        return data.keys().hasAll(['name', 'email', 'status', 'source', 'createdAt', 'createdBy'])
+        return data.keys().hasAll(['name', 'email', 'phone', 'notes', 'status', 'source', 'createdAt', 'createdBy'])
           && data.name is string && data.name.size() > 0 && data.name.size() <= 100
           && data.email is string && data.email.size() > 0 && data.email.size() <= 256
+          && data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 20
+          && data.notes is string && data.notes.size() <= 2000
           && data.status in ['New', 'Contacted', 'Qualified', 'Lost']
           && data.source in ['Website', 'Instagram', 'Referral']
           && (data.createdAt == request.time || data.createdAt == resource.data.createdAt)
