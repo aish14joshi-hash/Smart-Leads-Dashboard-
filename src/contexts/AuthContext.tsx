@@ -4,7 +4,9 @@ import {
   signInWithPopup, 
   GoogleAuthProvider, 
   signOut, 
-  User 
+  User,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -15,6 +17,8 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   signIn: () => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<void>;
+  signUp: (email: string, pass: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -57,12 +61,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithPopup(auth, provider);
   };
 
+  const signInWithEmail = async (email: string, pass: string) => {
+    await signInWithEmailAndPassword(auth, email, pass);
+  };
+
+  const signUp = async (email: string, pass: string, name: string) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    const firebaseUser = userCredential.user;
+    
+    // Create profile immediately for new email signups
+    const newProfile: UserProfile = {
+      uid: firebaseUser.uid,
+      email: email,
+      role: 'Sales User',
+      name: name
+    };
+    await setDoc(doc(db, 'users', firebaseUser.uid), newProfile);
+    setProfile(newProfile);
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signInWithEmail, signUp, logout }}>
       {children}
     </AuthContext.Provider>
   );

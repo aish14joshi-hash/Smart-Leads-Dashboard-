@@ -1,18 +1,43 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { TrendingUp, Mail, Sun, Moon, Sparkles, ShieldCheck } from 'lucide-react';
+import { TrendingUp, Mail, Sun, Moon, Sparkles, ShieldCheck, ArrowLeft, UserPlus, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+const signupSchema = loginSchema.extend({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+});
+
+type LoginMode = 'initial' | 'email-login' | 'email-signup';
 
 export const Login: React.FC = () => {
-  const { signIn } = useAuth();
+  const { signIn, signInWithEmail, signUp } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<LoginMode>('initial');
 
-  const handleLogin = async () => {
+  const { register: loginRegister, handleSubmit: handleLoginSubmit, formState: { errors: loginErrors } } = useForm({
+    resolver: zodResolver(loginSchema)
+  });
+
+  const { register: signupRegister, handleSubmit: handleSignupSubmit, formState: { errors: signupErrors } } = useForm({
+    resolver: zodResolver(signupSchema)
+  });
+
+  const handleGoogleLogin = async () => {
     setLoading(true);
     try {
       await signIn();
@@ -20,6 +45,51 @@ export const Login: React.FC = () => {
     } catch (error) {
       console.error(error);
       toast.error('Authentication failure: Clearance denied');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onEmailLogin = async (data: any) => {
+    setLoading(true);
+    try {
+      await signInWithEmail(data.email, data.password);
+      toast.success('Login successful: Nexus access granted');
+    } catch (error: any) {
+      console.error(error);
+      const errorCode = error.code;
+      if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password' || errorCode === 'auth/user-not-found') {
+        toast.error('Protocol failure: Access credentials invalid or session expired.');
+      } else if (errorCode === 'auth/too-many-requests') {
+        toast.error('Security alert: Excessive attempts detected. Signal locked temporarily.');
+      } else {
+        toast.error(`Login failed: ${error.message || 'Invalid credentials'}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onEmailSignup = async (data: any) => {
+    setLoading(true);
+    try {
+      await signUp(data.email, data.password, data.name);
+      toast.success('Account initialized: Identity created');
+    } catch (error: any) {
+      console.error(error);
+      const errorCode = error.code;
+      if (errorCode === 'auth/email-already-in-use') {
+        toast.error('Identity exists: This signal is already registered. Please authorize session instead.');
+        setMode('email-login');
+      } else if (errorCode === 'auth/weak-password') {
+        toast.error('Protocol deviation: Pass-key complexity insufficient.');
+      } else if (errorCode === 'auth/invalid-email') {
+        toast.error('Signal format error: Identity format invalid.');
+      } else if (errorCode === 'auth/operation-not-allowed') {
+        toast.error('System restriction: Email registration is currently disabled in Nexus core config.');
+      } else {
+        toast.error(`Creation failed: ${error.message || 'Error occurred'}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -56,6 +126,21 @@ export const Login: React.FC = () => {
           <CardHeader className="text-center space-y-6 pb-4 pt-10 relative">
             <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             
+            <AnimatePresence mode="wait">
+              {mode !== 'initial' && (
+                <motion.button
+                  key="back-button"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  onClick={() => setMode('initial')}
+                  className="absolute top-8 left-8 text-muted-foreground hover:text-primary transition-colors p-2"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+
             <motion.div 
               whileHover={{ scale: 1.1, rotate: 360 }}
               transition={{ duration: 0.8, type: "spring" }}
@@ -70,44 +155,167 @@ export const Login: React.FC = () => {
                 SmartLeads <span className="text-primary italic">Nexus</span>
               </CardTitle>
               <CardDescription className="text-muted-foreground font-bold uppercase tracking-[0.2em] text-[10px]">
-                Authorized Entry Portal
+                {mode === 'initial' ? 'Authorized Entry Portal' : mode === 'email-login' ? 'Nexus Credential Gateway' : 'Identity Initialization'}
               </CardDescription>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-8 p-10 pt-6">
-            <Button 
-              className="w-full h-16 text-[11px] font-black uppercase tracking-[0.2em] bg-primary hover:primary/90 text-primary-foreground rounded-[1.25rem] shadow-xl shadow-primary/20 transition-all active:scale-[0.98] group" 
-              onClick={handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-3" />
+          <CardContent className="p-10 pt-6">
+            <AnimatePresence mode="wait">
+              {mode === 'initial' ? (
+                <motion.div 
+                  key="initial"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  <Button 
+                    className="w-full h-16 text-[11px] font-black uppercase tracking-[0.2em] bg-primary hover:primary/90 text-primary-foreground rounded-[1.25rem] shadow-xl shadow-primary/20 transition-all active:scale-[0.98] group" 
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <div className="h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-3" />
+                    ) : (
+                      <Mail className="w-5 h-5 mr-3 group-hover:-translate-y-0.5 transition-transform" />
+                    )}
+                    Initialize Google Link
+                  </Button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border"></span>
+                    </div>
+                    <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em]">
+                      <span className="bg-card/40 px-3 text-muted-foreground/60 backdrop-blur-md">Alternative Protocol</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button 
+                      variant="secondary"
+                      className="h-14 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-border/50"
+                      onClick={() => setMode('email-login')}
+                    >
+                      <Lock className="w-4 h-4 mr-2 opacity-60" />
+                      Login
+                    </Button>
+                    <Button 
+                      variant="secondary"
+                      className="h-14 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-border/50"
+                      onClick={() => setMode('email-signup')}
+                    >
+                      <UserPlus className="w-4 h-4 mr-2 opacity-60" />
+                      Create
+                    </Button>
+                  </div>
+                </motion.div>
+              ) : mode === 'email-login' ? (
+                <motion.form 
+                  key="login"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  onSubmit={handleLoginSubmit(onEmailLogin)}
+                  className="space-y-6"
+                >
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Signal (Email)</Label>
+                      <Input 
+                        {...loginRegister('email')}
+                        className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
+                        placeholder="Nexus identity..."
+                      />
+                      {loginErrors.email && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{loginErrors.email.message as string}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Pass-key (Password)</Label>
+                      <Input 
+                        type="password"
+                        {...loginRegister('password')}
+                        className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
+                        placeholder="Secret sequence..."
+                      />
+                      {loginErrors.password && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{loginErrors.password.message as string}</p>}
+                    </div>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full h-16 text-[11px] font-black uppercase tracking-[0.2em] bg-primary text-primary-foreground rounded-[1.25rem] shadow-xl shadow-primary/20 active:scale-[0.98]"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <div className="h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    ) : (
+                      'Authorize Session'
+                    )}
+                  </Button>
+                </motion.form>
               ) : (
-                <Mail className="w-5 h-5 mr-3 group-hover:-translate-y-0.5 transition-transform" />
+                <motion.form 
+                  key="signup"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  onSubmit={handleSignupSubmit(onEmailSignup)}
+                  className="space-y-6"
+                >
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Identity Persona (Name)</Label>
+                      <Input 
+                        {...signupRegister('name')}
+                        className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
+                        placeholder="Target designation..."
+                      />
+                      {signupErrors.name && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{signupErrors.name.message as string}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Signal (Email)</Label>
+                      <Input 
+                        {...signupRegister('email')}
+                        className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
+                        placeholder="Nexus identity..."
+                      />
+                      {signupErrors.email && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{signupErrors.email.message as string}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-1">Pass-key (Password)</Label>
+                      <Input 
+                        type="password"
+                        {...signupRegister('password')}
+                        className="h-14 rounded-2xl border-border/50 bg-secondary/30 focus:bg-background transition-all" 
+                        placeholder="Secret sequence..."
+                      />
+                      {signupErrors.password && <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest pl-1">{signupErrors.password.message as string}</p>}
+                    </div>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full h-16 text-[11px] font-black uppercase tracking-[0.2em] bg-primary text-primary-foreground rounded-[1.25rem] shadow-xl shadow-primary/20 active:scale-[0.98]"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <div className="h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    ) : (
+                      'Initialize Record'
+                    )}
+                  </Button>
+                </motion.form>
               )}
-              Initialize Login Sequence
-            </Button>
+            </AnimatePresence>
             
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border"></span>
-              </div>
-              <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em]">
-                <span className="bg-card/40 px-3 text-muted-foreground/60 backdrop-blur-md">Secure Protocol</span>
-              </div>
-            </div>
-            
-            <div className="flex flex-col gap-4">
+            <div className="mt-8 flex flex-col gap-4">
               <div className="flex items-center gap-3 px-6 py-4 bg-secondary/50 rounded-2xl border border-border/50">
-                 <ShieldCheck className="w-5 h-5 text-emerald-500 opacity-60" />
+                 <ShieldCheck className="w-5 h-5 text-emerald-500 opacity-60 flex-shrink-0" />
                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight leading-relaxed">
-                   Biometric verification system active for all subsequent sessions.
+                   Encryption: AES-256 Enabled. Secure Protocol active.
                  </p>
               </div>
-              <p className="text-center text-[9px] text-muted-foreground/40 leading-relaxed font-bold uppercase tracking-widest px-4">
-                Encryption: AES-256 Enabled
-              </p>
             </div>
           </CardContent>
         </Card>
