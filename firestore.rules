@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'Admin';
+    }
+
+    function isSalesUser() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'Sales User';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email', 'role']) 
+          && data.uid == request.auth.uid
+          && data.email == request.auth.token.email
+          && data.role in ['Admin', 'Sales User']
+          && data.uid is string && data.uid.size() <= 128
+          && data.email is string && data.email.size() <= 256;
+      }
+
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data);
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) ||
+        isAdmin()
+      );
+    }
+
+    // --- Leads Collection ---
+    match /leads/{leadId} {
+      function isValidLead(data) {
+        return data.keys().hasAll(['name', 'email', 'status', 'source', 'createdAt', 'createdBy'])
+          && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+          && data.email is string && data.email.size() > 0 && data.email.size() <= 256
+          && data.status in ['New', 'Contacted', 'Qualified', 'Lost']
+          && data.source in ['Website', 'Instagram', 'Referral']
+          && (data.createdAt == request.time || data.createdAt == resource.data.createdAt)
+          && data.createdBy is string;
+      }
+
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidLead(request.resource.data) && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isValidLead(request.resource.data) && (
+        isAdmin() || isSalesUser()
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}
