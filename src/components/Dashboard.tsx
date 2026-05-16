@@ -14,9 +14,12 @@ import {
   TrendingUp,
   UserCheck,
   UserX,
-  UserPlus
+  UserPlus,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { leadService } from '../services/leadService';
 import { Lead, LeadStatus, LeadSource } from '../types';
 import { Button } from './ui/button';
@@ -50,6 +53,7 @@ import { toast } from 'sonner';
 
 export const Dashboard: React.FC = () => {
   const { profile, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -178,106 +182,120 @@ export const Dashboard: React.FC = () => {
   const getStatusBadge = (status: LeadStatus) => {
     switch (status) {
       case 'New': return <Badge variant="secondary" className="rounded-md font-bold text-[10px] uppercase">New</Badge>;
-      case 'Contacted': return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 rounded-md font-bold text-[10px] uppercase">Contacted</Badge>;
-      case 'Qualified': return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 rounded-md font-bold text-[10px] uppercase">Qualified</Badge>;
+      case 'Contacted': return <Badge variant="outline" className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 rounded-md font-bold text-[10px] uppercase">Contacted</Badge>;
+      case 'Qualified': return <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 rounded-md font-bold text-[10px] uppercase">Qualified</Badge>;
       case 'Lost': return <Badge variant="destructive" className="rounded-md font-bold text-[10px] uppercase">Lost</Badge>;
       default: return <Badge className="rounded-md font-bold text-[10px] uppercase">{status}</Badge>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans transition-colors duration-300">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 px-6 h-16 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-white" />
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20 px-4 sm:px-6 h-16 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center shadow-indigo-500/20 shadow-lg">
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <h1 className="text-lg font-bold tracking-tight text-slate-800">
-            SmartLeads <span className="text-slate-400 font-normal px-2">/</span> <span className="font-medium text-slate-600">Pipeline Dashboard</span>
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
+            SmartLeads <span className="text-slate-400 font-normal px-1 sm:px-2">/</span> <span className="font-medium text-slate-600 dark:text-slate-400 hidden xs:inline">Pipeline</span>
           </h1>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-500 border border-slate-200 uppercase tracking-wider hidden sm:block">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleTheme} 
+            className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+          >
+            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+          </Button>
+          
+          <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-bold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase tracking-wider hidden md:block">
             {profile?.role}
           </div>
-          <div className="flex items-center gap-2 pr-2 border-r border-slate-100">
-            <p className="text-xs font-bold text-slate-700">{profile?.name?.split(' ')[0]}</p>
+          
+          <div className="flex items-center gap-2 pr-2 border-r border-slate-200 dark:border-slate-800">
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-200 hidden xs:block">{profile?.name?.split(' ')[0]}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => logout()} className="text-slate-400 hover:text-slate-900">
+          
+          <Button variant="ghost" size="icon" onClick={() => logout()} className="text-slate-400 hover:text-red-500 transition-colors">
             <LogOut className="w-5 h-5" />
           </Button>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full p-6 space-y-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 space-y-6">
         {/* Bento Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 bg-slate-50/50 border-b border-slate-100 mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Pipeline</span>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 mb-2 sm:mb-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Pipeline</span>
               <Users className="h-3 w-3 text-slate-400" />
             </CardHeader>
-            <CardContent className="pb-6">
-              <div className="text-3xl font-black text-slate-800 tracking-tight">{stats.total}</div>
-              <p className="text-[10px] text-slate-400 mt-2 font-medium">Active Leads this page</p>
+            <CardContent className="pb-4 sm:pb-6">
+              <div className="text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{stats.total}</div>
+              <p className="text-[10px] text-slate-400 mt-1 sm:mt-2 font-medium">Record Count</p>
             </CardContent>
           </Card>
-          <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 bg-slate-50/50 border-b border-slate-100 mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Unprocessed</span>
-              <div className="w-2 h-2 rounded-full bg-indigo-500" />
+          
+          <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 mb-2 sm:mb-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">New</span>
+              <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
             </CardHeader>
-            <CardContent className="pb-6">
-              <div className="text-3xl font-black text-indigo-600 tracking-tight">{stats.new}</div>
-              <div className="mt-3 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+            <CardContent className="pb-4 sm:pb-6">
+              <div className="text-xl sm:text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">{stats.new}</div>
+              <div className="mt-2 sm:mt-3 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div className="h-full bg-indigo-500" style={{ width: `${(stats.new / (stats.total || 1)) * 100}%` }}></div>
               </div>
             </CardContent>
           </Card>
-          <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 bg-emerald-50/50 border-b border-emerald-100 mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/70">Conversion Rate</span>
+
+          <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 bg-emerald-50/50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-900/30 mb-2 sm:mb-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/70 dark:text-emerald-400/70">Conversion</span>
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
             </CardHeader>
-            <CardContent className="pb-6">
-              <div className="text-3xl font-black text-emerald-600 tracking-tight">
+            <CardContent className="pb-4 sm:pb-6">
+              <div className="text-xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                 {Math.round((stats.qualified / (stats.total || 1)) * 100)}%
               </div>
-              <p className="text-[10px] text-emerald-600/70 mt-2 font-bold uppercase tracking-widest">{stats.qualified} Qualified</p>
+              <p className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 mt-1 sm:mt-2 font-bold uppercase tracking-widest">{stats.qualified} Qualified</p>
             </CardContent>
           </Card>
-          <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 bg-slate-50/50 border-b border-slate-100 mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Risk Factor</span>
+
+          <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 mb-2 sm:mb-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Risk</span>
               <div className="w-2 h-2 rounded-full bg-red-400" />
             </CardHeader>
-            <CardContent className="pb-6">
-              <div className="text-3xl font-black text-slate-800 tracking-tight">{stats.lost}</div>
-              <p className="text-[10px] text-slate-400 mt-2 font-medium">Dropped from funnel</p>
+            <CardContent className="pb-4 sm:pb-6">
+              <div className="text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{stats.lost}</div>
+              <p className="text-[10px] text-slate-400 mt-1 sm:mt-2 font-medium">Lost Potential</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Filters & Actions Bento Container */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-          <div className="flex flex-wrap gap-3 items-center flex-1 w-full md:w-auto">
-            <div className="relative flex-1 min-w-[200px] md:max-w-xs">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-1">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input 
                 placeholder="Search index..." 
-                className="pl-10 h-10 border-slate-200 rounded-xl bg-slate-50/50 text-sm focus:ring-indigo-500" 
+                className="pl-10 h-10 border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 text-sm focus:ring-indigo-500" 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 sm:flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[130px] h-10 border-slate-200 rounded-xl bg-white text-xs font-bold uppercase tracking-tight">
+                <SelectTrigger className="h-10 border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-[10px] font-bold uppercase tracking-tight sm:w-[130px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-xl dark:border-slate-800">
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="New">New</SelectItem>
                   <SelectItem value="Contacted">Contacted</SelectItem>
@@ -286,34 +304,34 @@ export const Dashboard: React.FC = () => {
                 </SelectContent>
               </Select>
               <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="w-[130px] h-10 border-slate-200 rounded-xl bg-white text-xs font-bold uppercase tracking-tight">
+                <SelectTrigger className="h-10 border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-[10px] font-bold uppercase tracking-tight sm:w-[130px]">
                   <SelectValue placeholder="Source" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-xl dark:border-slate-800">
                   <SelectItem value="all">All Sources</SelectItem>
                   <SelectItem value="Website">Website</SelectItem>
                   <SelectItem value="Instagram">Instagram</SelectItem>
                   <SelectItem value="Referral">Referral</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={sortOrder} onValueChange={(v: "desc" | "asc") => setSortOrder(v)}>
-                <SelectTrigger className="w-[130px] h-10 border-slate-200 rounded-xl bg-white text-xs font-bold uppercase tracking-tight">
-                  <SelectValue placeholder="Sort" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="desc">Latest First</SelectItem>
-                  <SelectItem value="asc">Oldest First</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button variant="outline" size="sm" onClick={exportToCSV} className="h-10 rounded-xl border-slate-200 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-50">
-              <Download className="w-4 h-4 mr-2" />
-              Export
+          <div className="flex items-center gap-2">
+            <Select value={sortOrder} onValueChange={(v: "desc" | "asc") => setSortOrder(v)}>
+              <SelectTrigger className="flex-1 lg:w-[130px] h-10 border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-[10px] font-bold uppercase tracking-tight">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl dark:border-slate-800">
+                <SelectItem value="desc">Latest</SelectItem>
+                <SelectItem value="asc">Oldest</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={exportToCSV} className="h-10 rounded-xl border-slate-200 dark:border-slate-700 px-3 sm:px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">
+              <Download className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Export</span>
             </Button>
-            <Button size="sm" onClick={() => { setEditingLead(null); setIsDialogOpen(true); }} className="h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 text-xs font-bold uppercase tracking-wider shadow-indigo-200">
+            <Button size="sm" onClick={() => { setEditingLead(null); setIsDialogOpen(true); }} className="h-10 flex-1 lg:flex-none rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 text-[10px] font-bold uppercase tracking-wider shadow-indigo-200 dark:shadow-none transition-all active:scale-95">
               <Plus className="w-4 h-4 mr-2" />
               Add Lead
             </Button>
@@ -321,102 +339,104 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Table Bento Container */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Leads Registry</span>
-            <span className="text-[10px] text-slate-500 font-medium italic">Showing records 1 - {leads.length}</span>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/30">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Registry</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium italic hidden xs:inline">Record Set (1-{leads.length})</span>
           </div>
-          <Table>
-            <TableHeader className="bg-slate-50/50">
-              <TableRow className="hover:bg-transparent border-slate-100">
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 py-4 h-auto">Entity Name</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 h-auto">Communication</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 h-auto">Status</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 h-auto">Acquisition</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 h-auto text-right">Registered</TableHead>
-                <TableHead className="w-[60px] h-auto"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i} className="border-slate-50">
-                    {Array.from({ length: 6 }).map((_, j) => (
-                      <TableCell key={j} className="py-4"><div className="h-4 bg-slate-50 animate-pulse rounded-lg" /></TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : leads.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-72 text-center text-slate-400">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
-                        <Users className="w-6 h-6 text-slate-300" />
-                      </div>
-                      <p className="text-sm font-medium">No leads matching current criteria</p>
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
+                <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 py-4 h-auto min-w-[150px]">Entity</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 h-auto min-w-[150px]">Communication</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 h-auto">Status</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 h-auto">Acquisition</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 h-auto text-right">Registered</TableHead>
+                  <TableHead className="w-[60px] h-auto"></TableHead>
                 </TableRow>
-              ) : (
-                leads.map((lead) => (
-                  <TableRow key={lead.id} className="hover:bg-slate-50/50 border-slate-50 transition-colors">
-                    <TableCell className="font-bold text-slate-700 py-4">{lead.name}</TableCell>
-                    <TableCell className="text-slate-500 font-medium">{lead.email}</TableCell>
-                    <TableCell>{getStatusBadge(lead.status)}</TableCell>
-                    <TableCell>
-                      <span className="text-[10px] px-2 py-1 bg-slate-100 text-slate-600 rounded font-bold uppercase tracking-tight border border-slate-200">
-                        {lead.source}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-slate-400 text-[11px] font-bold uppercase text-right">
-                      {lead.createdAt?.seconds 
-                        ? new Date(lead.createdAt.seconds * 1000).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-                        : 'PENDING'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white border border-transparent hover:border-slate-200 transition-all">
-                            <MoreVertical className="w-4 h-4 text-slate-400" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl border-slate-200">
-                          <DropdownMenuItem onClick={() => { setEditingLead(lead); setIsDialogOpen(true); }} className="rounded-lg">
-                            <Edit className="w-3.5 h-3.5 mr-2" /> <span className="font-medium">Modify</span>
-                          </DropdownMenuItem>
-                          {profile?.role === 'Admin' && (
-                            <DropdownMenuItem className="text-red-600 rounded-lg" onClick={() => handleDelete(lead.id!)}>
-                              <Trash className="w-3.5 h-3.5 mr-2" /> <span className="font-medium">Eliminate</span>
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i} className="border-slate-50 dark:border-slate-800/50">
+                      {Array.from({ length: 6 }).map((_, j) => (
+                        <TableCell key={j} className="py-4"><div className="h-4 bg-slate-50 dark:bg-slate-800 animate-pulse rounded-lg" /></TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : leads.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-72 text-center text-slate-400">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700">
+                          <Users className="w-6 h-6 text-slate-300 dark:text-slate-600" />
+                        </div>
+                        <p className="text-sm font-medium">No results found</p>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  leads.map((lead) => (
+                    <TableRow key={lead.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 border-slate-50 dark:border-slate-800/50 transition-colors">
+                      <TableCell className="font-bold text-slate-700 dark:text-slate-200 py-4">{lead.name}</TableCell>
+                      <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{lead.email}</TableCell>
+                      <TableCell>{getStatusBadge(lead.status)}</TableCell>
+                      <TableCell>
+                        <span className="text-[10px] px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded font-bold uppercase tracking-tight border border-slate-200 dark:border-slate-700">
+                          {lead.source}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-slate-400 dark:text-slate-500 text-[11px] font-bold uppercase text-right whitespace-nowrap">
+                        {lead.createdAt?.seconds 
+                          ? new Date(lead.createdAt.seconds * 1000).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+                          : 'PENDING'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all">
+                              <MoreVertical className="w-4 h-4 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-900 shadow-xl">
+                            <DropdownMenuItem onClick={() => { setEditingLead(lead); setIsDialogOpen(true); }} className="rounded-lg cursor-pointer">
+                              <Edit className="w-3.5 h-3.5 mr-2" /> <span className="font-medium">Modify</span>
+                            </DropdownMenuItem>
+                            {profile?.role === 'Admin' && (
+                              <DropdownMenuItem className="text-red-500 dark:text-red-400 rounded-lg cursor-pointer" onClick={() => handleDelete(lead.id!)}>
+                                <Trash className="w-3.5 h-3.5 mr-2" /> <span className="font-medium">Eliminate</span>
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         {/* Pagination Bento Card */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100">
-               <TrendingUp className="w-5 h-5 text-indigo-500" />
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+             <div className="w-10 h-10 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center border border-slate-100 dark:border-slate-700">
+               <TrendingUp className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
              </div>
              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block -mb-1">Confidence Score</span>
-                <span className="text-lg font-black text-slate-800">98.4%</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block -mb-1">Operational Confidence</span>
+                <span className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight">98.4%</span>
              </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <Button 
               variant="outline" 
               size="sm" 
               disabled={history.length === 0 || loading}
               onClick={handlePrevPage}
-              className="rounded-xl border-slate-200 text-[11px] font-bold uppercase tracking-wider h-10 px-4"
+              className="flex-1 sm:flex-none rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider h-10 px-6"
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
               Prev
@@ -426,7 +446,7 @@ export const Dashboard: React.FC = () => {
               size="sm" 
               disabled={!lastDoc || loading || leads.length < 10}
               onClick={handleNextPage}
-              className="rounded-xl border-slate-200 text-[11px] font-bold uppercase tracking-wider h-10 px-4"
+              className="flex-1 sm:flex-none rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider h-10 px-6"
             >
               Next
               <ChevronRight className="w-4 h-4 ml-2" />

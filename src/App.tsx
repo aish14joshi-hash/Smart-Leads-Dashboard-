@@ -4,6 +4,7 @@
  */
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
 import { Toaster } from './components/ui/sonner';
@@ -13,10 +14,10 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
-          <p className="text-gray-500 font-medium animate-pulse">Initializing SmartLeads...</p>
+          <div className="w-12 h-12 border-4 border-muted border-t-primary rounded-full animate-spin" />
+          <p className="text-muted-foreground font-medium animate-pulse">Initializing SmartLeads...</p>
         </div>
       </div>
     );
@@ -27,9 +28,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-      <Toaster position="top-right" closeButton richColors />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+        <Toaster position="top-right" closeButton richColors />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
