@@ -14,6 +14,16 @@
       },
       "required": ["uid", "email", "role"]
     },
+    "UserIndex": {
+      "title": "User Index",
+      "description": "Lookup mapping for identifiers to emails",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "type": { "type": "string", "enum": ["username", "phone"] }
+      },
+      "required": ["email", "type"]
+    },
     "Lead": {
       "title": "Lead",
       "description": "Sales lead information",
@@ -36,6 +46,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "User profiles and roles"
+    },
+    "/user_indices/{indexId}": {
+      "schema": "UserIndex",
+      "description": "Identifier to email mappings"
     },
     "/leads/{leadId}": {
       "schema": "Lead",
