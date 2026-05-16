@@ -2,8 +2,10 @@
 
 An AI-powered CRM dashboard built for high-performance sales teams. This application leverages the Google Gemini API to provide tactical insights on sales leads and uses Firebase for real-time data management.
 
-## 🚀 Live Demo
-**[View Live Application](https://ais-pre-k755eeal7mkqov4xswmazx-232873291335.asia-east1.run.app)**
+## 🚀 Accessing the Application
+
+- **In AI Studio (Preview)**: Use the [Live Preview Link](https://ais-pre-k755eeal7mkqov4xswmazx-232873291335.asia-east1.run.app).
+- **Local Development**: `localhost:3000` is only applicable when running the project on your own machine after exporting the code.
 
 ---
 
